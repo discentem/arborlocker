@@ -3,6 +3,9 @@
 package pullrequest
 
 import (
+	"io"
+	"log"
+	"net/http"
 	"strings"
 
 	"github.com/discentem/arborlocker/htmlhelpers"
@@ -10,6 +13,7 @@ import (
 	"github.com/cli/go-gh"
 	"github.com/cli/go-gh/pkg/api"
 	graphql "github.com/cli/shurcooL-graphql"
+	"github.com/google/go-github/github"
 )
 
 // LinesFromHTMLDescription parses t, assumed to be HTML text from a Github Pull Request description.
@@ -72,4 +76,28 @@ func Query(c api.GQLClient, owner, project string, prNumber int) (HTMLBodyQuery,
 		return HTMLBodyQuery{}, err
 	}
 	return query, nil
+}
+
+func RunWebhook(w http.ResponseWriter, r *http.Request) {
+	payload, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Print(err)
+	}
+
+	event, err := github.ParseWebHook(github.WebHookType(r), payload)
+	if err != nil {
+		log.Printf("could not parse webhook: err=%s\n", err)
+		return
+	}
+
+	switch e := event.(type) {
+	case *github.PullRequestEvent:
+		log.Printf(*e.PullRequest.Body)
+	default:
+		log.Printf("unknown event type %s\n", github.WebHookType(r))
+		return
+	}
+	if err := r.Body.Close(); err != nil {
+		log.Print(err)
+	}
 }
