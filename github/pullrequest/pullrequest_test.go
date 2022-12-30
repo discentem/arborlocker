@@ -1,8 +1,13 @@
 package pullrequest
 
 import (
+	"io"
+	"net/http"
 	"testing"
 
+	"github.com/cli/go-gh/pkg/api"
+	graphql "github.com/cli/shurcooL-graphql"
+	fakegraphql "github.com/discentem/arborlocker/graphql"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -53,5 +58,53 @@ func TestLinesFromHTMLDescription(t *testing.T) {
 			t.Error(err)
 		}
 		assert.Equal(t, test.want, lines)
+	}
+}
+
+func TestQuery(t *testing.T) {
+	tests := []struct {
+		client api.GQLClient
+		number int
+		owner  string
+		name   string
+		want   HTMLBodyQuery
+	}{
+		{
+			client: fakegraphql.NewFakeGQLClient("blah", func(w http.ResponseWriter, req *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				_, err := io.WriteString(w, `{
+					"data": {
+						"repository": {
+							"nameWithOwner":"Acme/BigProject",
+							"pullRequest": {
+								"bodyHTML":"blah"
+							}
+						}
+					}
+				}`)
+				if err != nil {
+					t.Error(err)
+				}
+			}),
+			number: 1,
+			owner:  "Acme",
+			name:   "BigProject",
+			want: HTMLBodyQuery{
+				Repository: Repository{
+					NameWithOwner: *graphql.NewString("Acme/BigProject"),
+					PullRequest: PullRequest{
+						BodyHTML: *graphql.NewString("blah"),
+					},
+				},
+			},
+		},
+	}
+	for _, test := range tests {
+		got, err := Query(test.client, test.owner, test.name, test.number)
+		if err != nil {
+			t.Error(err)
+		}
+		assert.Equal(t, test.want, got)
+
 	}
 }
