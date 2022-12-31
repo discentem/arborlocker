@@ -72,6 +72,18 @@ func PRNumFromLine(line string) (int, error) {
 	return n, nil
 }
 
+func PRListFromLines(lines []string) ([]int, error) {
+	nums := []int{}
+	for _, l := range lines {
+		i, err := PRNumFromLine(l)
+		if err != nil {
+			return nums, err
+		}
+		nums = append(nums, i)
+	}
+	return nums, nil
+}
+
 type PullRequest struct {
 	Body     graphql.String `graphql:"body"`
 	BodyHTML graphql.String `graphql:"bodyHTML"`
