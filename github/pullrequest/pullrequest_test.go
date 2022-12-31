@@ -89,24 +89,22 @@ func TestStackLines(t *testing.T) {
 	}
 }
 
-func TestPRNumsFromLines(t *testing.T) {
+func TestPRNumFromLine(t *testing.T) {
 	table := []struct {
-		lines []string
-		want  []int
+		line string
+		want int
 	}{
 		{
-			lines: []string{
-				"\t* #349",
-				"\t* __->__ #348",
-			},
-			want: []int{
-				349,
-				348,
-			},
+			line: "\t* #349",
+			want: 349,
 		},
 	}
 	for _, test := range table {
-		assert.Equal(t, test.want, PRNumFromLine(test.lines))
+		num, err := PRNumFromLine(test.line)
+		if err != nil {
+			t.Error(err)
+		}
+		assert.Equal(t, test.want, num)
 	}
 }
 
