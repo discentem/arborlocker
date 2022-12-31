@@ -58,14 +58,18 @@ func StackLines(header string, match func(header, line string) bool, text string
 
 }
 
-func PRNumFromLine(line string) (*int, error) {
+func PRNumFromLine(line string) (int, error) {
 	// * #349 ---------> 349
 	// * __->__ #348 --> 348
-	n, err := strconv.Atoi(strings.SplitN(line, "#", 1)[1])
-	if err != nil {
-		return nil, err
+	_, after, found := strings.Cut(line, "#")
+	if !found {
+		return 0, fmt.Errorf("sep not found in %s", line)
 	}
-	return &n, nil
+	n, err := strconv.Atoi(after)
+	if err != nil {
+		return 0, err
+	}
+	return n, nil
 }
 
 type PullRequest struct {
