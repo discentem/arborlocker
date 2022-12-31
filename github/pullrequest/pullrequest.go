@@ -54,6 +54,7 @@ type HTMLBodyQuery struct {
 	Repository Repository `graphql:"repository(owner: $owner, name: $name)"`
 }
 
+// test
 func Query(c api.GQLClient, owner, project string, prNumber int) (HTMLBodyQuery, error) {
 	var err error
 	var client api.GQLClient
