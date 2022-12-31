@@ -108,6 +108,31 @@ func TestPRNumFromLine(t *testing.T) {
 	}
 }
 
+func TestPRListFromLines(t *testing.T) {
+	table := []struct {
+		lines []string
+		want  []int
+	}{
+		{
+			lines: []string{
+				"\t* #349",
+				"\t* #348",
+			},
+			want: []int{
+				349,
+				348,
+			},
+		},
+	}
+	for _, test := range table {
+		nums, err := PRListFromLines(test.lines)
+		if err != nil {
+			t.Error(err)
+		}
+		assert.Equal(t, test.want, nums)
+	}
+}
+
 func TestQuery(t *testing.T) {
 	tests := []struct {
 		client api.GQLClient
