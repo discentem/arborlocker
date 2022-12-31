@@ -3,12 +3,13 @@
 package pullrequest
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
-
-	"github.com/discentem/arborlocker/htmlhelpers"
 
 	"github.com/cli/go-gh"
 	"github.com/cli/go-gh/pkg/api"
@@ -16,19 +17,14 @@ import (
 	"github.com/google/go-github/github"
 )
 
-// LinesFromHTMLDescription parses t, assumed to be HTML text from a Github Pull Request description.
-func LinesFromHTMLDescription(content string) ([]string, error) {
-	return htmlhelpers.GetLinks(content)
-}
-
 // LinesFromTextDescription parses t, assumed to be a plain text from a Github Pull Request description,
-func LinesFromTextDescription(t string, ignoreLineFn func(string) bool) []string {
-	lines := strings.Split(t, "\n")
+func LinesFromTextDescription(text string, ignoreLineFn func(string) bool) []string {
+	lines := strings.Split(text, "\n")
 	flines := []string{}
 
 	if ignoreLineFn == nil {
 		ignoreLineFn = func(t string) bool {
-			return t == "\t---" || t == "\t" || t == "\t\t\t" || t == "---"
+			return t == "\t---" || t == "\t" || t == "\t\t\t" || t == "---" || t == "\n"
 		}
 	}
 
@@ -41,7 +37,39 @@ func LinesFromTextDescription(t string, ignoreLineFn func(string) bool) []string
 	return flines
 }
 
+var ErrMatchFuncNil = errors.New("match function must not be nil")
+var ErrStackLinksNotFound = errors.New("stack links not found")
+
+func StackLines(header string, match func(header, line string) bool, text string) ([]string, error) {
+	lines := LinesFromTextDescription(text, nil)
+	if match == nil {
+		return []string{}, ErrMatchFuncNil
+	}
+	fmt.Println(lines)
+	for i, l := range lines {
+		// Once we find the standard text that Sapling adds, assumed that the rest of the lines are PR numbers
+		if match(header, l) {
+			// * #349
+			// * __->__ #348
+			return lines[i+1:], nil
+		}
+	}
+	return []string{}, ErrStackLinksNotFound
+
+}
+
+func PRNumFromLine(line string) (*int, error) {
+	// * #349 ---------> 349
+	// * __->__ #348 --> 348
+	n, err := strconv.Atoi(strings.SplitN(line, "#", 1)[1])
+	if err != nil {
+		return nil, err
+	}
+	return &n, nil
+}
+
 type PullRequest struct {
+	Body     graphql.String `graphql:"body"`
 	BodyHTML graphql.String `graphql:"bodyHTML"`
 }
 
@@ -50,22 +78,22 @@ type Repository struct {
 	NameWithOwner graphql.String `graphql:"nameWithOwner"`
 }
 
-type HTMLBodyQuery struct {
+type RepoQuery struct {
 	Repository Repository `graphql:"repository(owner: $owner, name: $name)"`
 }
 
-func Query(c api.GQLClient, owner, project string, prNumber int) (HTMLBodyQuery, error) {
+func Query(c api.GQLClient, owner, project string, prNumber int) (RepoQuery, error) {
 	var err error
 	var client api.GQLClient
 	if c == nil {
 		client, err = gh.GQLClient(nil)
 		if err != nil {
-			return HTMLBodyQuery{}, err
+			return RepoQuery{}, err
 		}
 	} else {
 		client = c
 	}
-	var query HTMLBodyQuery
+	var query RepoQuery
 	variables := map[string]interface{}{
 		"number": graphql.Int(prNumber),
 		"owner":  graphql.String(owner),
@@ -73,7 +101,7 @@ func Query(c api.GQLClient, owner, project string, prNumber int) (HTMLBodyQuery,
 	}
 	err = client.Query("pullRequest", &query, variables)
 	if err != nil {
-		return HTMLBodyQuery{}, err
+		return RepoQuery{}, err
 	}
 	return query, nil
 }
@@ -93,7 +121,7 @@ func RunWebhook(w http.ResponseWriter, r *http.Request) {
 
 	switch e := event.(type) {
 	case *github.PullRequestEvent:
-		log.Print(*e.PullRequest)
+		log.Print(e.PullRequest.GetURL())
 	case *github.PingEvent:
 		log.Print(e)
 	default:
