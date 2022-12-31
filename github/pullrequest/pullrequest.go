@@ -50,6 +50,7 @@ type Repository struct {
 	NameWithOwner graphql.String `graphql:"nameWithOwner"`
 }
 
+// blah
 type HTMLBodyQuery struct {
 	Repository Repository `graphql:"repository(owner: $owner, name: $name)"`
 }
