@@ -78,6 +78,7 @@ func Query(c api.GQLClient, owner, project string, prNumber int) (HTMLBodyQuery,
 	return query, nil
 }
 
+// Copied with <3 from https://groob.io/tutorial/go-github-webhook/
 func RunWebhook(w http.ResponseWriter, r *http.Request) {
 	payload, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -92,7 +93,9 @@ func RunWebhook(w http.ResponseWriter, r *http.Request) {
 
 	switch e := event.(type) {
 	case *github.PullRequestEvent:
-		log.Printf(*e.PullRequest.Body)
+		log.Print(*e.PullRequest)
+	case *github.PingEvent:
+		log.Print(e)
 	default:
 		log.Printf("unknown event type %s\n", github.WebHookType(r))
 		return
