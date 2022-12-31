@@ -53,10 +53,7 @@ func extractLinks(content string) ([]string, error) {
 		if linkUrl, err = url.Parse(val[1]); err != nil {
 			return links, err
 		}
-
-		l := (strings.Split(strings.Split(linkUrl.String(), ";")[1], "%"))[0]
-
-		links = append(links, l)
+		links = append(links, linkUrl.String())
 
 	}
 	return links, nil

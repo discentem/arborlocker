@@ -37,34 +37,39 @@ func LinesFromTextDescription(t string, ignoreLineFn func(string) bool) []string
 	return flines
 }
 
-type PRQuery struct {
-	Repository struct {
-		PullRequest struct {
-			BodyHTML graphql.String `graphql:"bodyHTML"`
-		} `graphql:"pullRequest(number: $number)"`
-	} `graphql:"repository(owner: $owner, name: $name)"`
+type PullRequest struct {
+	BodyHTML graphql.String `graphql:"bodyHTML"`
 }
 
-func Query(c *api.GQLClient, prNumber int) (PRQuery, error) {
+type Repository struct {
+	PullRequest   PullRequest    `graphql:"pullRequest(number: $number)"`
+	NameWithOwner graphql.String `graphql:"nameWithOwner"`
+}
+
+type HTMLBodyQuery struct {
+	Repository Repository `graphql:"repository(owner: $owner, name: $name)"`
+}
+
+func Query(c api.GQLClient, owner, project string, prNumber int) (HTMLBodyQuery, error) {
 	var err error
 	var client api.GQLClient
 	if c == nil {
 		client, err = gh.GQLClient(nil)
 		if err != nil {
-			return PRQuery{}, err
+			return HTMLBodyQuery{}, err
 		}
 	} else {
-		client = *c
+		client = c
 	}
-	var query PRQuery
+	var query HTMLBodyQuery
 	variables := map[string]interface{}{
 		"number": graphql.Int(prNumber),
-		"owner":  graphql.String("facebook"),
-		"name":   graphql.String("sapling"),
+		"owner":  graphql.String(owner),
+		"name":   graphql.String(project),
 	}
 	err = client.Query("pullRequest", &query, variables)
 	if err != nil {
-		return PRQuery{}, err
+		return HTMLBodyQuery{}, err
 	}
 	return query, nil
 }
