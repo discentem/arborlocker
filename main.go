@@ -13,6 +13,7 @@ func main() {
 		log.Print(err)
 	}
 	fmt.Println(pr)
+	fmt.Println(pr.Repository.NameWithOwner)
 
 	// log.Println("server started")
 	// http.HandleFunc("/webhook", pullrequest.RunWebhook)
