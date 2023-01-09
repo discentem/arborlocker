@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/discentem/arborlocker/github/pullrequest"
@@ -11,6 +12,7 @@ func main() {
 	if err != nil {
 		log.Print(err)
 	}
+	fmt.Println(pr)
 
 	// log.Println("server started")
 	// http.HandleFunc("/webhook", pullrequest.RunWebhook)
